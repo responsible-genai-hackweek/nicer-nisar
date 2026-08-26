@@ -100,7 +100,8 @@ def fetch_copernicus_dem(bounds_lonlat, buffer_deg=0.02):
 
 
 def calculate_local_incidence_angle(gcov_file, kml_file, dem_file=None, buffer_m=200,
-                                     frequency='frequencyA', output_dir='./incidence_angle_output'):
+                                     frequency='frequencyA', output_dir='./incidence_angle_output',
+                                     match_grid=None):
     """
     Calculate local incidence angle from a NISAR GCOV product and terrain DEM.
 
@@ -118,6 +119,11 @@ def calculate_local_incidence_angle(gcov_file, kml_file, dem_file=None, buffer_m
         Frequency band ('frequencyA' or 'frequencyB'; default 'frequencyA')
     output_dir : str
         Directory to write output GeoTIFFs and quicklook PNG (default './incidence_angle_output')
+    match_grid : str, optional
+        Path to a reference raster whose exact grid (CRS, transform, shape) the outputs
+        should be written on. Default None builds the grid from the KML bounds plus a
+        buffer, which does NOT align with the GCOV product grid. Pass a GCOV GeoTIFF here
+        to get outputs that overlay the backscatter pixel-for-pixel.
 
     Returns:
     --------
@@ -241,6 +247,40 @@ def calculate_local_incidence_angle(gcov_file, kml_file, dem_file=None, buffer_m
     print(f"  Subwindow: x[{x_idx_min}:{x_idx_max}] ({len(x_subwindow)} cols), y[{y_idx_min}:{y_idx_max}] ({len(y_subwindow)} rows)")
 
     # ========================================================================
+    # 3b. OPTIONAL: SNAP THE OUTPUT GRID TO A REFERENCE RASTER
+    # ========================================================================
+
+    # By default the output grid above is derived from the KML bounds plus a buffer, which
+    # does not line up with the GCOV product grid. Passing match_grid=<raster path> instead
+    # locks the output to that raster's exact grid, so incidence angle and backscatter can
+    # be combined per-pixel later with no further resampling.
+    if match_grid is not None:
+        print(f"Snapping output grid to reference raster {match_grid}...")
+
+        with rasterio.open(match_grid) as ref:
+            ref_transform = ref.transform
+            ref_height, ref_width = ref.shape
+            ref_bounds = ref.bounds
+            ref_epsg = ref.crs.to_epsg()
+
+        if ref_epsg != epsg_code:
+            raise ValueError(
+                f"match_grid is EPSG:{ref_epsg} but the GCOV product is EPSG:{epsg_code}; "
+                "reproject the reference raster first."
+            )
+
+        # These four drive dst_transform in the next section
+        min_x_utm, min_y_utm, max_x_utm, max_y_utm = ref_bounds
+
+        # Pixel-CENTRE coordinates. y must descend (north-up convention) because the
+        # np.gradient call below uses these axes to get the sign of the slope right.
+        x_subwindow = ref_transform.c + (np.arange(ref_width) + 0.5) * ref_transform.a
+        y_subwindow = ref_transform.f + (np.arange(ref_height) + 0.5) * ref_transform.e
+
+        print(f"  Output grid: {ref_height} rows x {ref_width} cols, "
+              f"bounds ({min_x_utm:.1f}, {min_y_utm:.1f}, {max_x_utm:.1f}, {max_y_utm:.1f})")
+
+    # ========================================================================
     # 4. FETCH OR LOAD DEM AND REPROJECT TO SUBWINDOW
     # ========================================================================
 
@@ -264,6 +304,7 @@ def calculate_local_incidence_angle(gcov_file, kml_file, dem_file=None, buffer_m
         dem_data = dem_src_obj.read(1)
         dem_transform = dem_src_obj.transform
         dem_crs = dem_src_obj.crs
+        dem_nodata = dem_src_obj.nodata
     else:
         # Load from user file
         print(f"  Reading DEM from {dem_file}")
@@ -271,6 +312,7 @@ def calculate_local_incidence_angle(gcov_file, kml_file, dem_file=None, buffer_m
             dem_data = src.read(1)
             dem_transform = src.transform
             dem_crs = src.crs
+            dem_nodata = src.nodata
 
     # Reproject DEM to the product's CRS and resolution, covering the subwindow
     src_transform = dem_transform
@@ -292,17 +334,22 @@ def calculate_local_incidence_angle(gcov_file, kml_file, dem_file=None, buffer_m
             dtype=dem_data.dtype,
             transform=dem_transform,
             crs=dem_crs,
+            nodata=dem_nodata,
         ) as src_mem:
             src_mem.write(dem_data, 1)
 
         with memfile.open() as src_mem:
+            # Carry nodata through explicitly. Without this, DEM voids resample to 0 m
+            # and become spurious cliffs in the surface normals below.
             reproject(
                 src_mem.read(1),
                 dem_reprojected,
                 src_transform=src_mem.transform,
                 src_crs=src_mem.crs,
+                src_nodata=dem_nodata,
                 dst_transform=dst_transform,
                 dst_crs=dst_crs,
+                dst_nodata=np.nan,
                 resampling=Resampling.bilinear
             )
 
@@ -421,6 +468,7 @@ def calculate_local_incidence_angle(gcov_file, kml_file, dem_file=None, buffer_m
             dtype=data.dtype,
             crs=dst_crs,
             transform=dst_transform,
+            nodata=np.nan,
         ) as dst:
             dst.write(data, 1)
             dst.update_tags(1, description=description)
@@ -442,7 +490,11 @@ def calculate_local_incidence_angle(gcov_file, kml_file, dem_file=None, buffer_m
 
     # Left: DEM with hillshade
     ls = LightSource(azdeg=315, altdeg=45)
-    dem_shade = ls.hillshade(dem_reprojected)
+    # hillshade() cannot handle NaN, so fill voids with the mean elevation just for the
+    # quicklook, then mask them back out so gaps read as blank rather than flat grey.
+    dem_valid = np.isfinite(dem_reprojected)
+    dem_filled = np.where(dem_valid, dem_reprojected, np.nanmean(dem_reprojected))
+    dem_shade = np.where(dem_valid, ls.hillshade(dem_filled), np.nan)
     axes[0].imshow(dem_shade, cmap='gray', origin='upper')
     axes[0].set_title('Terrain (Hillshade)')
     axes[0].set_ylabel('Northing (pixels)')

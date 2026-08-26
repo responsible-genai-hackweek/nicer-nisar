@@ -141,14 +141,22 @@ def download_nisar_data(kml_file, start_date, end_date, test_only=True, output_d
             # Skip scenes with unparseable times
             pass
 
-    # Filter GCOV products: keep only those whose acquisition time matches a GUNW start or stop time
+    # Filter GCOV products: keep only those whose acquisition time is within ±12 hours of a GUNW start or stop time
+    # This captures GCOV products from the same pass/acquisition pair even if timing isn't exact
+    from datetime import timedelta
+    buffer_hours = 12
+    buffer_td = timedelta(hours=buffer_hours)
+
     filtered_gcov = []
     for gcov_scene in gcov_products:
         start_time_str = gcov_scene.properties.get('startTime', '')
         try:
             gcov_time = datetime.fromisoformat(start_time_str.replace('Z', ''))
-            if gcov_time in gunw_times:
-                filtered_gcov.append(gcov_scene)
+            # Check if GCOV time is within ±12 hours of any GUNW endpoint
+            for gunw_endpoint in gunw_times:
+                if abs(gcov_time - gunw_endpoint) <= buffer_td:
+                    filtered_gcov.append(gcov_scene)
+                    break  # Only add once even if it matches multiple endpoints
         except (ValueError, AttributeError):
             pass
 

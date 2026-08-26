@@ -28,7 +28,7 @@ List all participants on the project. Here is a good space to share your persona
 | Name | Personal goals | Can help with | Role |
 | ------------- | ------------- | ------------- | ------------- |
 | Scott Henderson (@scottyhq) | I want to better understand the various ways to customize an agentic harness to work efficiently.  | I can help with understanding SAR data and processing | Project Lead |
-| Andrew Joros (@ajoros) | ... | ... | Project Co-Lead |
+| Andrew Joros (@ajoros) | Run a baseline vs Skill/MCP on one AOI | AOIs, notes, slides | Project Co-Lead |
 | Joe Kennedy (@jhkennedy) | ... | ... | Team Member  |
 | Eric Gagliano (@egagli) | ... | ... | Team Member  |
 | Joachim Meyer (@jomey) | ... | ... | Team Member  |

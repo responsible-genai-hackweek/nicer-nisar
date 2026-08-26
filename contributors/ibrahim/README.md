@@ -4,8 +4,9 @@ Boundary shapefile/GeoJSON for the Mores Creek Summit LiDAR domain, used as a po
 
 ## Files
 
-- [`Mores_lidar_domain.zip`](./Mores_lidar_domain.zip) — Shapefile (EPSG:6340, NAD83(2011) / UTM Zone 11N)
-- [`mores_boundary_utm.geojson`](./mores_boundary_utm.geojson) — GeoJSON (EPSG:32611, WGS84 / UTM Zone 11N)
+- [`Mores_lidar_domain.zip`](./Mores_lidar_domain.zip): Shapefile (EPSG:6340, NAD83(2011) / UTM Zone 11N)
+- [`mores_boundary_utm.geojson`](./mores_boundary_utm.geojson): GeoJSON (EPSG:32611, WGS84 / UTM Zone 11N)
+- [`mores_boundary_utm.geojson`](./mores_boundary_utm.geojson): GeoJSON (EPSG:4326, lat/lon)
 
 ## NISAR Details
 

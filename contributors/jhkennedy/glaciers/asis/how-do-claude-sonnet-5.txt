@@ -1,0 +1,144 @@
+╭─── Claude Code v2.1.220 ─────────────────────────────────────────────────────╮
+│                                  │ Tips for getting started                  │
+│           Welcome back!          │ Run /init to create a CLAUDE.md file wit… │
+│                                  │ ───────────────────────────────────────── │
+│              ▐▛███▜▌             │ What's new                                │
+│             ▝▜█████▛▘            │ Bug fixes and reliability improvements    │
+│               ▘▘ ▝▝              │ Bug fixes and reliability improvements    │
+│                                  │ Cost estimates (`/cost`, status line, `-… │
+│   Sonnet 5 · API Usage Billing   │ /release-notes for more                   │
+│              ~/tmp               │                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+❯ /model                                                                        
+  ⎿  Set model to Sonnet 5 and saved as your default for new sessions
+
+❯ How do I get glacier velocity estimates from NISAR?                           
+
+● Web Search("NISAR glacier velocity offset tracking data product ASF")
+  ⎿  Did 1 search in 7s
+
+● Web Search("NISAR L2 GOFF product cryosphere ice velocity autoRIFT")
+  ⎿  Did 1 search in 9s
+
+● Fetch(https://nisar-docs.asf.alaska.edu/goff/)
+  ⎿  Received 109KB (200 OK)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/products-overview/)
+  ⎿  Received 194.4KB (200 OK)
+
+● Web Search("NISAR ASF Vertex download GOFF ROFF asf_search python how to")
+  ⎿  Did 1 search in 9s
+
+● Here's the practical path to get glacier velocity from NISAR:
+
+  1. Two ways to get there
+
+  A. Use pre-made velocity products (easiest, once available)
+  - NASA's ITS_LIVE project (registry.opendata.aws/its-live-data
+  (https://registry.opendata.aws/its-live-data/)) plans to ingest NISAR into its
+  standard velocity mosaics/time series, using the same autoRIFT pipeline it
+  runs for Landsat/Sentinel-1/2. Check there first — if NISAR pairs are already
+  processed, you get ready-to-use vx/vy velocity GeoTIFFs/NetCDFs with no
+  offset-tracking work on your end.
+
+  B. Derive velocity yourself from NISAR offset-tracking products
+  NISAR has dedicated cryosphere products built for exactly this:
+
+  ┌──────────────────────┬───────┬──────────────────────────────────────────┐
+  │       Product        │ Level │                  Notes                   │
+  ├──────────────────────┼───────┼──────────────────────────────────────────┤
+  │ ROFF (Range-Doppler  │ L1    │ Radar coordinates, 90 m pixel spacing    │
+  │ Pixel Offsets)       │       │                                          │
+  ├──────────────────────┼───────┼──────────────────────────────────────────┤
+  │ GOFF (Geocoded Pixel │       │ Map-projected (UTM/polar stereographic), │
+  │  Offsets)            │ L2    │  80 m posting — this is the one you want │
+  │                      │       │  for glacier work                        │
+  └──────────────────────┴───────┴──────────────────────────────────────────┘
+
+  Both are generated specifically "for acquisitions over Antarctica, Greenland,
+  and selected mountain glaciers" and contain dense range/azimuth pixel offsets
+  (plus SNR/quality layers) from speckle tracking between a reference and
+  secondary RSLC pair — conceptually the same autoRIFT-style offset tracking
+  used for Sentinel-1/Landsat velocity products, just done natively by the NISAR
+  pipeline.
+
+  Important caveat straight from the product docs: GOFF/ROFF layers are raw —
+  "distributed without performing any conventional post-processing... layers
+  might contain offset outliers and are not low pass filtered." So you'll need
+  to do your own outlier filtering/masking before treating them as velocity.
+
+  2. Getting the data
+
+  Search/download via asf_search (Python):
+  import asf_search as asf
+
+  results = asf.search(dataset='NISAR', processingLevel='GOFF')
+  session = asf.ASFSession().auth_with_creds('username', 'password')  # 
+  Earthdata Login
+  results.download(path='./data', session=session)
+  You can also browse interactively via ASF Vertex or use earthaccess. Requires
+  a NASA Earthdata Login. Note that as of now only provisional products exist
+  for acquisitions from mid-2026 onward (earlier data was "beta" with known
+  issues) — so real GOFF coverage is still limited/early.
+
+  3. Converting offsets → velocity
+
+  Once you have GOFF:
+  1. Read range and azimuth offset layers + their SNR/quality layers.
+  2. Mask low-SNR / outlier pixels (recommended since NISAR doesn't do this for
+  you).
+  3. Convert pixel offsets to ground displacement using the pixel spacing
+  (range/azimuth → ground distance, accounting for look geometry).
+  4. Divide displacement by the time separation between the reference and
+  secondary acquisitions to get velocity (m/day or m/year).
+  5. Optionally apply your own low-pass filtering, similar to what
+  ITS_LIVE/autoRIFT do post-hoc.
+
+  If you tell me whether you want to do this in Python (e.g., with autoRIFT,
+  rasterio, h5py for the HDF5 GOFF files) I can help write the actual processing
+  script.
+
+  Sources:
+  - Geocoded Pixel Offsets (GOFF) - NISAR Data User Guide
+  (https://nisar-docs.asf.alaska.edu/goff/)
+  - NISAR Data Products - NISAR Data User Guide
+  (https://nisar-docs.asf.alaska.edu/products-overview/)
+  - Finding NISAR Data with ASF Search - NISAR Data User Guide
+  (https://nisar-docs.asf.alaska.edu/asf-search/)
+  - asf-search · PyPI (https://pypi.org/project/asf-search/)
+  - Inter-mission Time Series of Land Ice Velocity and Elevation (ITS_LIVE) -
+  Registry of Open Data on AWS (https://registry.opendata.aws/its-live-data/)
+  - NISAR Provisional Geocoded Pixel Offsets (Version 1) | NASA Earthdata (https
+  ://www.earthdata.nasa.gov/data/catalog/asf-nisar-l2-goff-provisional-v1-1)
+  - Cryosphere - NASA Science
+  (https://science.nasa.gov/mission/nisar/cryosphere/)
+
+✻ Churned for 48s
+
+❯ Can you save this entire chat session to                                      
+  ../nicer-nisar/contributors/jhkennedy/glaciers/asis/how-do-claude-sonnet-5.md 
+
+  Read 1 file, listed 2 directories (ctrl+o to expand)
+
+● Write(~/nicer-nisar/contributors/jhkennedy/glaciers/asis/how-do-claude-sonnet-
+       5.md)
+  ⎿  Wrote 63 lines to ../nicer-nisar/contributors/jhkennedy/glaciers/asis/
+     how-do-claude-sonnet-5.md
+       1 # Chat Session: Getting Glacier Velocity Estimates from NISAR
+       2 
+       3 ## User Question
+       4 How do I get glacier velocity estimates from NISAR?
+       5 
+       6 ## Response
+       7 
+       8 Here's the practical path to get glacier velocity from NISAR:
+       9 
+      10 ### 1. Two ways to get there
+     … +90 lines (ctrl+o to expand)
+
+● Saved to
+  nicer-nisar/contributors/jhkennedy/glaciers/asis/how-do-claude-sonnet-5.md.
+
+✻ Cooked for 30s

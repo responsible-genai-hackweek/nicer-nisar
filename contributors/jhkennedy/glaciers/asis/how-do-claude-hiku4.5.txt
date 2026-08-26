@@ -1,0 +1,171 @@
+╭─── Claude Code v2.1.220 ─────────────────────────────────────────────────────╮
+│                                   │ Tips for getting started                 │
+│           Welcome back!           │ Run /init to create a CLAUDE.md file wi… │
+│                                   │ ──────────────────────────────────────── │
+│              ▐▛███▜▌              │ What's new                               │
+│             ▝▜█████▛▘             │ Bug fixes and reliability improvements   │
+│               ▘▘ ▝▝               │ Bug fixes and reliability improvements   │
+│                                   │ Cost estimates (`/cost`, status line, `… │
+│   Haiku 4.5 · API Usage Billing   │ /release-notes for more                  │
+│               ~/tmp               │                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+❯ How do I get glacier velocity estimates from NISAR?                           
+
+  Thought for 4s (ctrl+o to expand)
+
+● Web Search("NISAR glacier velocity estimates data access")
+  ⎿  Did 1 search in 7s
+
+● NISAR (NASA-ISRO Synthetic Aperture Radar) glacier velocity data is processed
+  through the ITS_LIVE (Interagency Time Series of Land Ice Velocity and
+  Elevation) system. Here's how to access it:
+
+  Direct Access
+
+  1. ITS_LIVE Portal: Visit https://its-live.jpl.nasa.gov/ — this is the
+  primary, login-free interface for accessing all velocity data, including
+  NISAR-derived estimates once available.
+  2. Data Discovery: Search by glacier region or download velocity maps directly
+  from the portal.
+
+  NISAR Data Processing Pipeline
+
+  - NISAR scenes are ingested by the Alaska Satellite Facility (ASF) DAAC
+  immediately after acquisition
+  - Velocity estimates are typically available within 2 hours of scene
+  cataloguing
+  - Feature tracking is performed on 20,000+ image pairs daily using InSAR
+  techniques
+
+  Real-Time Notifications
+
+  Set up near-real-time alerts for new NISAR scenes:
+  - Use NASA's Common Metadata Repository (CMR) to subscribe to NISAR collection
+  notifications
+  - Subscribe via AWS SQS to receive messages when new scenes are ingested
+
+  Alternative Data Sources
+
+  For historical glacier velocity data (pre-NISAR), explore:
+  - MEaSUREs Greenland Ice Velocity datasets
+  (https://nsidc.org/data/nsidc-0481/versions/4) at NSIDC
+  - ITS_LIVE regional velocity products (https://nsidc.org/sites/default/files/d
+  ocuments/user-guide/nsidc-0776-v002-userguide.pdf)
+
+  The velocity estimates come from InSAR processing, which measures glacier
+  surface displacement between radar acquisitions, providing sub-meter accuracy.
+
+  Sources:
+  - ITS_LIVE global glacier velocity data in near-real time
+  (https://tc.copernicus.org/articles/19/3517/2025/tc-19-3517-2025.pdf)
+  - Alaska Satellite Facility Distributed Active Archive Center
+  (https://www.earthdata.nasa.gov/centers/asf-daac)
+  - MEaSUREs Greenland Ice Velocity datasets
+  (https://nsidc.org/data/nsidc-0481/versions/4)
+
+✻ Cogitated for 18s
+
+❯ save this response to                                                         
+  ../nicer-nisar/contributors/jhkennedy/glaciers/asis/how-do-claude-hiku4.5.md  
+
+  Thought for 3s (ctrl+o to expand)
+
+● Write(~/nicer-nisar/contributors/jhkennedy/glaciers/asis/how-do-claude-hiku4.5
+       .md)
+  ⎿  Wrote 35 lines to ../nicer-nisar/contributors/jhkennedy/glaciers/asis/
+     how-do-claude-hiku4.5.md
+      1 # How to Get Glacier Velocity Estimates from NISAR
+      3 NISAR (NASA-ISRO Synthetic Aperture Radar) glacier velocity data 
+        is processed through the **ITS_LIVE** (Interagency Time Series of
+         Land Ice Velocity and Elevation) system.
+      5 ## Direct Access
+      6 
+        is is the primary, login-free interface for accessing all velocit
+        y data, including NISAR-derived estimates once available.
+      8 
+        ity maps directly from the portal.
+     … +42 lines (ctrl+o to expand)
+
+● Saved the response to the file.
+
+✻ Brewed for 8s
+
+❯ Sorry, can you save this entire chat session to                               
+  ../nicer-nisar/contributors/jhkennedy/glaciers/asis/how-do-claude-hiku4.5.md  
+
+  Thought for 1s (ctrl+o to expand)
+
+● Write(~/nicer-nisar/contributors/jhkennedy/glaciers/asis/how-do-claude-hiku4.5
+       .md)
+  ⎿  Added 12 lines, removed 7 lines
+       1 -# How to Get Glacier Velocity Estimates from NISAR             
+       1 +# Chat Session: Getting Glacier Velocity Estimates from NISAR  
+       2  
+       3 -NISAR (NASA-ISRO Synthetic Aperture Radar) glacier velocity dat
+         -a is processed through the **ITS_LIVE** (Interagency Time Serie
+         -s of Land Ice Velocity and Elevation) system.                  
+       3 +## User Question                                               
+       4 +How do I get glacier velocity estimates from NISAR?            
+       5  
+       5 -## Direct Access                                               
+       6 +## Response                                                    
+       7  
+       8 +NISAR (NASA-ISRO Synthetic Aperture Radar) glacier velocity dat
+         +a is processed through the **ITS_LIVE** (Interagency Time Serie
+         +s of Land Ice Velocity and Elevation) system. Here's how to acc
+         +ess it:                                                        
+       9 +                                                               
+      10 +### Direct Access                                              
+      11 +                                                               
+      12  1. **ITS_LIVE Portal**: Visit https://its-live.jpl.nasa.gov/ — 
+          this is the primary, login-free interface for accessing all vel
+          ocity data, including NISAR-derived estimates once available.
+      13  
+      14  2. **Data Discovery**: Search by glacier region or download vel
+          ocity maps directly from the portal.
+      15  
+      11 -## NISAR Data Processing Pipeline                              
+      16 +### NISAR Data Processing Pipeline                             
+      17  
+      18  - NISAR scenes are ingested by the **Alaska Satellite Facility 
+          (ASF) DAAC** immediately after acquisition
+      19  - Velocity estimates are typically available **within 2 hours**
+           of scene cataloguing
+      20  - Feature tracking is performed on 20,000+ image pairs daily us
+          ing InSAR techniques
+      21  
+      17 -## Real-Time Notifications                                     
+      22 +### Real-Time Notifications                                    
+      23  
+      24  Set up near-real-time alerts for new NISAR scenes:
+      25  - Use NASA's **Common Metadata Repository (CMR)** to subscribe 
+          to NISAR collection notifications
+      26  - Subscribe via AWS SQS to receive messages when new scenes are
+           ingested
+      27  
+      23 -## Alternative Data Sources                                    
+      28 +### Alternative Data Sources                                   
+      29  
+      30  For historical glacier velocity data (pre-NISAR), explore:
+      31  - [MEaSUREs Greenland Ice Velocity datasets](https://nsidc.org/
+          data/nsidc-0481/versions/4) at NSIDC
+     ...
+      33  
+      34  The velocity estimates come from InSAR processing, which measur
+          es glacier surface displacement between radar acquisitions, pro
+          viding sub-meter accuracy.
+      35  
+      31 -## Sources                                                     
+      36 +### Sources                                                    
+      37  
+      38  - [ITS_LIVE global glacier velocity data in near-real time](htt
+          ps://tc.copernicus.org/articles/19/3517/2025/tc-19-3517-2025.pd
+          f)
+      39  - [Alaska Satellite Facility Distributed Active Archive Center]
+          (https://www.earthdata.nasa.gov/centers/asf-daac)
+
+● Updated the file with the full chat session.
+
+✻ Baked for 7s

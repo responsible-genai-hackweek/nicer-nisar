@@ -112,3 +112,10 @@ venv.bak/
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+
+# ── OS / editor cruft ──
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

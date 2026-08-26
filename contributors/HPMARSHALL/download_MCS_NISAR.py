@@ -29,7 +29,7 @@ results = download_nisar_data(
     kml_file=kml_file,
     start_date=start_date,
     end_date=end_date,
-    test_only=True,
+    test_only=False,
     output_dir=output_dir
 )
 

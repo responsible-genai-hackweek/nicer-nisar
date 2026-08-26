@@ -109,3 +109,6 @@ venv.bak/
 *.hdf5
 *.nc
 *.tif
+# pixi environments
+.pixi/*
+!.pixi/config.toml

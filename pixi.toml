@@ -1,0 +1,15 @@
+[workspace]
+authors = ["Scott Henderson <3924836+scottyhq@users.noreply.github.com>"]
+channels = ["conda-forge"]
+name = "nicer-nisar"
+platforms = ["osx-arm64", "linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = ">=3.14.7,<3.15"
+earthaccess = ">=0.18.0,<0.19"
+rioxarray = ">=0.23.0,<0.24"
+virtualizarr = ">=2.7.3,<3"
+icechunk = ">=2.1.2,<3"

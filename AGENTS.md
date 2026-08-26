@@ -9,23 +9,18 @@ learning project, not a production codebase.
 
 See `README.md` for the full problem statement, collaborator list, and goals.
 
-## Environment
+## Adding more context information
 
-Managed by [pixi](https://pixi.sh) (`pixi.toml` + `pixi.lock`).
+DO NOT read all project rules or skills simultaneously. Load them conditionally based on your active tasks.
 
-```bash
-pixi install                 # materialize the environment from pixi.lock
-pixi run python ...          # run a command inside the environment
-pixi shell                   # interactive shell in the environment
-pixi add <package>           # add a conda-forge dependency (updates pixi.toml + pixi.lock)
-pixi add --pypi <package>    # add a PyPI-only dependency
-```
+## Repository rules
 
-Always manage any package changes with `pixi`.
-(`.gitattributes` marks it binary/generated, so it will not show a useful diff).
+Look at `.agents/rules/repository-rules.md`
 
-There are no tests and no linter config.
+## Python environment and package management
 
-## Repository layout conventions
+Look at `.agents/rules/package-management.md`
 
-- `contributors/<github-username>/` — each person's personal scratch space. DO NOT edit other people's folders.
+## Code quality
+
+Look at `.agents/rules/code-quality.md`

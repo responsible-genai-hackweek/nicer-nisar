@@ -1,6 +1,6 @@
 ---
 name: opera-rtc-s1-download
-description: Download OPERA L2 RTC-S1 VV Cloud-Optimized GeoTIFFs from ASF via earthaccess. Use when fetching Sentinel-1 RTC backscatter, estimating stack size, or when ASF datapool returns 401 Unauthorized. Prefers ~/.netrc over EARTHDATA_TOKEN, HTTPS _VV.tif URLs only, and a one-file size check before bulk download.
+description: Download OPERA L2 RTC-S1 VV Cloud-Optimized GeoTIFFs from ASF via earthaccess. Use when fetching Sentinel-1 RTC backscatter. Prefers ~/.netrc over EARTHDATA_TOKEN, HTTPS _VV.tif URLs only, and a one-file size check before bulk download.
 ---
 
 # OPERA RTC-S1 VV download
@@ -45,11 +45,10 @@ AOI numbers and polygons: [references/aois.md](references/aois.md).
   (client for `cumulus.asf.alaska.edu`). That needs username/password cookies
   from `~/.netrc`, not a Bearer token.
 - If both token and netrc exist, **drop the token** for download.
-- Still 401 after netrc: Earthdata profile → Applications → authorize ASF.
 - Never paste Earthdata tokens or passwords into chat, git, or the skill.
 
 ## Guardrails
 
 - Default to **one relative orbit** per site unless the user asked for all tracks.
 - Do not download Pioneer Fire and MCS together (same orbits; Pioneer bbox is larger).
-- Do not use the padded Washoe Valley box for Davis; see references.
+

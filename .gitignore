@@ -108,7 +108,8 @@ venv.bak/
 *.hdf
 *.hdf5
 *.nc
-*.tif
+# OPERA RTC VV stack (~11 GiB). Small .tif AOI masks elsewhere may be committed.
+contributors/ajoros/data/
 # pixi environments
 .pixi/*
 !.pixi/config.toml

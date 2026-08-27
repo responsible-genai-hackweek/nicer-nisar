@@ -12,3 +12,6 @@ pixi add --pypi <package>    # add a PyPI-only dependency
 
 Always manage any package changes with `pixi`.
 (`.gitattributes` marks pixi.lock binary/generated, so it will not show a useful diff).
+
+For further information, use this https://pixi.prefix.dev/latest/llms.txt
+

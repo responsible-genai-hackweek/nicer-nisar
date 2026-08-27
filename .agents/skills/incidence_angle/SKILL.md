@@ -7,6 +7,6 @@ whenToUse: when local incidence angles are needed for either phase-based or ampl
 This skill is used to calculate local incidence angle, stores by default in ./incidence_angle_output.
     Inputs required: local path to NISAR GCOV HDF5 file, kml file for subdomain of interest, and optional DEM.
 
-DEM is not required but can be provided.  If not available, function will download Copernicus 30m DEM.
+If you don't have a DEM, see this example: run_incidence_angle_MCS.py
+If you have a specific DEM, see this example: run_incidence_angle_MCS_lidar.py
 
-Two examples are also in this directory for not providing DEM (run_incidence_angle_MCS.py) and when a 0.5m lidar DEM is provided (run_incidence_angle_MCS_lidar.py) for the Mores Creek Summit domain (/contributors/HPMARSHALL/MCS_domain.kml) 

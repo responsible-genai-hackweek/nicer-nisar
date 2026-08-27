@@ -18,6 +18,7 @@ NISAR launched **2025-07-30**. There are **no** NISAR granules during the 2024 b
 - NISAR date spans (padded bbox, metadata only): [nisar-coverage-davis.md](nisar-coverage-davis.md)
 - Sentinel-1 over the shapefile envelope, Aug–Oct 2024 inventory: [sentinel1-coverage-davis.md](sentinel1-coverage-davis.md). Product: OPERA RTC-S1. Pair: **2024-09-04** (pre) vs **2024-09-28** (post-containment).
 - OPERA RTC-S1 **VV** time series (Feb–Aug 2017–2026, Davis + MCS, all tracks): local only under `data/opera-rtc-s1-vv/` (~11 GiB, gitignored). Scripts: [opera_vv_size_check.py](opera_vv_size_check.py), [download_opera_rtc_vv.py](download_opera_rtc_vv.py).
+- Mean snowmelt-runoff-onset DOWY inside a polygon (Gagliano et al. Zarr, lazy from Zenodo): [mean_dowy.py](mean_dowy.py). `pixi run python contributors/ajoros/mean_dowy.py` (davis + mcs).
 
 **Beta vs provisional:** same product family, different processing maturity. Beta is early, not fully calibrated (workflow familiarization). Provisional is later software (CRID P05023+), calibrated and only partly validated — use that for analysis. Do not mix beta and provisional in one time series. After ~Jan 2026 on this AOI you mostly only have provisional. GOFF / RIFG / RUNW / ROFF: none over this box.
 

@@ -24,3 +24,4 @@ Look at `.agents/rules/package-management.md`
 ## Code quality
 
 Look at `.agents/rules/code-quality.md`
+

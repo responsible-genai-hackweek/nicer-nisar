@@ -1,15 +1,15 @@
 ---
-name: product-mapper
-description: Maps science use cases to official NISAR products (L2/L3) with confidence
-levels and handles uncertainty gracefully.
+name: analysis-ready-product-mapper
+description: Maps science use cases to official NISAR analysis-ready products (L2/L3)
+with confidence levels and handles uncertainty gracefully.
 ---
 
 # Product Mapper Skill Instructions
 
 ## Purpose
-This skill helps users determine which NISAR product to use for specific science use
-cases. It maps science use cases to official NISAR products (L2 and L3) based on the
-current product documentation and capabilities.
+This skill helps users determine which NISAR analysis-ready product is suited for
+specific science use cases. It maps science use cases to official NISAR analysis-ready
+products (L2 and L3) based on the current product documentation and capabilities.
 
 ## Workflow
 
@@ -17,12 +17,12 @@ current product documentation and capabilities.
    "ice velocity", "soil moisture")
 
 2. **Lookup Process**:
-   - Search `product-rules.md` for a matching use case
+   - Search `analysis-ready-product-rules.md` for a matching use case
    - If found, retrieve the recommended NISAR product(s)
    - If not found, flag as "unknown use case"
 
 3. **Output**:
-   - Recommended NISAR product(s)
+   - Recommended NISAR analysis-ready product(s)
    - Product type: L2 (Geocoded) or L3 (Geophysical)
    - Confidence level (HIGH/MEDIUM/LOW)
    - Reasoning/why this product works

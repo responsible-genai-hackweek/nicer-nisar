@@ -30,5 +30,6 @@ products (L2 and L3) based on the current product documentation and capabilities
 
 4. **Handle Uncertainty**:
    - For ambiguous cases, suggest multiple products
-   - For missing use cases, recommend consulting NISAR documentation or domain expert
+   - For missing use cases, recommend consulting
+     [NISAR data user guide](https://nisar-docs.asf.alaska.edu/) or domain expert
    - For complex parameters, explain what additional information is needed

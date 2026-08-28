@@ -10,7 +10,7 @@ Four executed notebooks, in order:
 |---|---|---|
 | 1 | [`1_test_virtualizarr.ipynb`](1_test_virtualizarr.ipynb) | **Does it work?** Feasibility against real granules, failures kept in. |
 | 2 | [`2_cube_maintenance.ipynb`](2_cube_maintenance.ipynb) | **Can we operate it?** Parallel build, incremental append, compaction. |
-| 3 | [`3_real_example_pipeline.ipynb`](3_real_example_pipeline.ipynb) | **What is it for?** Full lifecycle, a round-trip proof, then L-band backscatter at the Paradise SNOTEL station beside Sentinel-1, Sentinel-2 and the snow pillow. |
+| 3 | [`3_real_example_pipeline.ipynb`](3_real_example_pipeline.ipynb) | **What is it for?** A context map of the study sites, the full lifecycle, a round-trip proof, then L-band backscatter at the Paradise SNOTEL station beside Sentinel-1, Sentinel-2 and the snow pillow. |
 | 4 | [`4_with_and_without_virtualizarr.ipynb`](4_with_and_without_virtualizarr.ipynb) | **Is it worth it?** The same analysis four ways — timed and byte-counted. |
 
 `nisar_virtual.py` holds the helpers all four import.
@@ -169,26 +169,30 @@ A/B/C are measured in `us-west-2`; D is computed from file sizes.
 
 | Path | Wall time | Bytes moved | Requests |
 |---|---|---|---|
-| **A** Icechunk virtual cube, direct S3 | **2.4 s** | **61 MB** | 92 |
-| **B** open every HDF5, direct S3 | 19.7 s | 1,092 MB | 253 |
-| **C** open every HDF5, over HTTPS | 74.9 s | 1,092 MB | 253 |
+| **A** Icechunk virtual cube, direct S3 | **2.1 s** | **61 MB** | 92 |
+| **B** open every HDF5, direct S3 | 18.6 s | 1,092 MB | 253 |
+| **C** open every HDF5, over HTTPS | 68.1 s | 1,092 MB | 253 |
 | **D** download all granules first | 3.5 h *(modelled, 100 Mbit/s)* | 158 GB | 23 |
+
+(One run; the measured columns move by a few seconds with the network. The ratios do not.)
 
 All paths return **the same numbers** — A and B agree to 7 decimal places, which is the check that
 makes the rest of the table mean anything.
 
-**Against the realistic in-region baseline (B), virtualizing is ~8× faster and moves ~18× less.**
+**Against the realistic in-region baseline (B), virtualizing is ~9× faster and moves ~18× less** —
+and path A moves *exactly* the chunk bytes the answer needs, which is the floor. B and C move 18×
+that; downloading everything moves 2,600×.
 What disappears is not pixel reads — both paths read the same chunks — but the HDF5 B-tree
 traversal, re-paid per granule per session. The AOI's chunks are 2.64 MB per granule; the direct
 path moves 11.8 MB (1 MB blocks), 43.3 MB (4 MB) or 167.6 MB (16 MB) before it can find them.
 
-**The protocol switch alone costs 3.8×.** Off-AWS users cannot use direct S3 — credentials are
+**The protocol switch alone costs ~3.7×.** Off-AWS users cannot use direct S3 — credentials are
 region-scoped — so path C is what they are forced onto. Measuring it *in-region* isolates the
 endpoint cost from the slower link; a slower link is then modelled on top from the measured byte
 and request counts, with the assumptions written down.
 
-**The index pays for itself in ~1.2 runs**, because building it is itself a metadata-only
-operation (0.88 s/granule). Anyone who runs an analysis twice, or shares the cube once, is past
+**The index pays for itself in about one run**, because building it is itself a metadata-only
+operation (0.78 s/granule, 18 s for the whole track). Off-AWS it pays back in a fifth of a run. Anyone who runs an analysis twice, or shares the cube once, is past
 break-even.
 
 **Scale note.** The answer is 184 bytes; the granules holding it are 158 GB — 860 million times
@@ -323,8 +327,10 @@ put those indices ~250 km away. Nothing errored; the numbers were plausible; onl
 being *wrong in the same way* gave it away. Group by grid, and keep an invariant site in every
 analysis.
 
-**7. Orbit direction does not mean the same thing to two missions.** NISAR ascending is ~06:00
-local and descending ~19:20; Sentinel-1 is the reverse — ascending ~18:00, descending ~07:15.
+**7. Orbit direction does not mean the same thing to two missions.** NISAR ascending is ~6:00 am
+local and descending ~7:50 pm; Sentinel-1 is the reverse — ascending ~6:25 pm, descending ~6:55 am.
+(Those are circular means of local time-of-day across each series, not single overpasses:
+acquisitions drift a few minutes between cycles and the PST/PDT switch moves them an hour.)
 Pairing "ascending with ascending" pairs a dawn overpass with a dusk one, which for a spring
 snowpack is the difference between refrozen and wet, i.e. most of the signal. Pair on **local
 time**, not the direction flag, and label every series with its relative orbit.
@@ -359,6 +365,7 @@ silently reports **zero bytes**.
 
 ```bash
 pixi install
+pixi run jupyter lab
 ```
 
 Requires Earthdata Login credentials in `~/.netrc` — NISAR provisional products are not
@@ -368,9 +375,9 @@ this is meant to run in `us-west-2`.
 
 Three things to know:
 
-- **Jupyter is not declared in `pixi.toml`** — it comes from the CryoCloud hub. Either run the
-  notebooks with the hub's Jupyter using the pixi environment as a kernel, or `pixi add jupyterlab`
-  if you want the environment to be self-contained.
+- `jupyterlab` and `nbconvert` are declared in `pixi.toml`, so `pixi run jupyter lab` works and
+  the environment is self-contained. They were added after an environment rebuild removed the
+  hub-provided Jupyter and left the committed notebooks un-runnable.
 - Notebook 3 additionally reads geometries from the sibling `nisar` repo
   (`/home/jovyan/repos/nisar/geometries/*.geojson`) and pulls Sentinel-1 and SNOTEL through
   `easysnowdata`, Sentinel-2 through the Element84 STAC API. Those are network calls to non-NASA

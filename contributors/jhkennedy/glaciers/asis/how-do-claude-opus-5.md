@@ -49,7 +49,8 @@
   paths.
 
 ● Fetch(https://nisar-docs.asf.alaska.edu/products/goff/)
-  ⎿  Received 0 bytes (404 Not Found)
+  ⎿  Receiv  docs overview page implied. Let me check actual granule coverage over
+ed 0 bytes (404 Not Found)
 
 ● Web Search("NISAR GOFF product "layer1" "layer2" slantRangeOffset
             alongTrackOffset HDF5 structure cryosphere")

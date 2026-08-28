@@ -1,0 +1,115 @@
+ ▐▛███▛█   Claude Code v2.1.248
+▝▜██████▀  Opus 5 · API Usage Billing
+  ▝▝ ▝▝    ~/tmp
+
+
+❯ /model                                                                        
+  ⎿  Set model to Opus 5 and saved as your default for new sessions
+
+❯ How do I get glacier velocity estimates from NISAR?                           
+
+● I'll check the NISAR documentation for what's available on glacier velocity.
+
+● Skill(nisar-docs)
+  ⎿  Successfully loaded skill
+
+  Listed 1 directory, ran 13 shell commands (ctrl+o to expand)
+
+● Short answer
+
+  NISAR doesn't ship a ready-made glacier velocity product. What it gives you is
+  dense pixel-offset products — you apply the filtering and the offset→velocity
+  conversion yourself. Two flavors of the same thing:
+
+  ┌────────────────────┬───────────────────┬─────────┬──────────────────────┐
+  │      Product       │     Geometry      │ Posting │       Use when       │
+  ├────────────────────┼───────────────────┼─────────┼──────────────────────┤
+  │ GOFF (L2 Geocoded  │ UTM / polar       │         │ Default choice —     │
+  │ Pixel Offsets)     │ stereographic     │ 80 m    │ already              │
+  │                    │                   │         │ map-projected        │
+  ├────────────────────┼───────────────────┼─────────┼──────────────────────┤
+  │ ROFF (L1           │ radar             │         │ You want native      │
+  │ Range-Doppler      │ (range-Doppler)   │ 90 m    │ geometry or to redo  │
+  │ Pixel Offsets)     │                   │         │ the geocoding        │
+  └────────────────────┴───────────────────┴─────────┴──────────────────────┘
+
+  GOFF is literally ROFF geocoded (bilinear interp, using the reference RSLC
+  orbit + DEM). Both are described in the guide as "primarily meant for 
+  cryosphere applications."
+
+  What's inside
+
+  Offsets come from incoherent cross-correlation (speckle/amplitude tracking) on
+  a pair of coarsely coregistered RSLCs, coregistered geometrically via orbit
+  ephemeris + DEM.
+
+  - Core layers: along-track offset, slant-range offset — provided as three
+    layers each (different correlation window/search configurations, organized
+    by range bandwidth and area of observation)
+  - Quality layers: offset variances, cross-offset variance, correlation surface
+    peak, SNR
+
+  Critically: the layers are distributed with no post-processing. No outlier
+  rejection, no low-pass filtering. Culling on correlation peak / SNR / variance
+  is your job, not an optional refinement.
+
+  To get velocity you divide the offsets by the temporal baseline of the RSLC
+  pair — check the L2 GOFF product spec for the offset units and sign
+  conventions before you do (GOFF spec PDF
+  (https://nisar.asf.earthdatacloud.nasa.gov/NISAR-SAMPLE-DATA/DOCS/NISAR_D-1050
+  10_RevC_NASA_SDS_Product_Specification_L2_GOFF_Nov8_2024_w-sigs.pdf), ROFF
+  spec (https://nisar.asf.earthdatacloud.nasa.gov/NISAR-SAMPLE-DATA/DOCS/NISAR_D
+  -105009_RevC_NASA_SDS_Product_Specification_L1_ROFF_Nov8_2024_w-sigs.pdf)).
+
+  Two known issues that matter a lot for glaciers
+
+  From the guide's known-issues page:
+
+  1. Ionosphere corrupts the azimuth (along-track) offsets over ice sheets —
+     "severe, uncorrected" distortions of up to a few pixels. Range offsets are
+     far less affected. Don't trust an along-track velocity component at face
+     value over high-latitude ice.
+  2. The offset-tracking search radius was too small to capture fast motion —
+     anything beyond roughly a few thousand m/yr gets clipped. The mission says
+     the radius will be expanded and past acquisitions reprocessed. So fast
+     tidewater outlets are exactly where current products fail.
+
+  Also relevant: cryosphere interferograms use rubbersheeting coregistration
+  refined by these same amplitude offsets, so ionospheric azimuth error
+  propagates into GUNW/RUNW phase there too.
+
+  Getting the data
+
+  Use PROVISIONAL (released 20 Jul 2026, CRID P05023, calibrated + partially
+  validated, acquisitions from 17 Jun 2026 onward). Avoid mixing with the older
+  BETA products — processing-software differences will show up as spurious
+  signal.
+
+  import earthaccess
+  results = earthaccess.search_data(
+      short_name='NISAR_L2_GOFF_PROVISIONAL_V1',
+      temporal=(...), polygon=[...]
+  )
+
+  import asf_search as asf
+  results = asf.search(dataset='NISAR', processingLevel='GOFF',
+                       dataMaturity='PROVISIONAL')
+
+  Or in Vertex: dataset=NISAR, sciProducts=GOFF
+  (https://search.asf.alaska.edu/#/?dataset=NISAR&sciProducts=GOFF). Products
+  are HDF5. Harmony supports subsetting/extraction on GOFF (not ROFF).
+
+  Background reading
+
+  - NISAR L3 Ice Sheets and Glacier Products ATBD (Joughin et al., 2022) — how
+    the ice-velocity requirements are meant to be met
+  - NISAR L1/L2 ATBD — the offset-tracking algorithm itself
+  - White paper: Mountain Glaciers and Snow Hydrology (2023), on the documents
+    page (https://nisar-docs.asf.alaska.edu/documents)
+
+  One caveat on scope: for slow glaciers, offset tracking at 80 m posting may be
+  noisier than InSAR phase from GUNW would be — worth considering if your
+  target moves less than a few m/day. For fast ice, offsets are the right tool,
+  but see issue #2 above.
+
+✻ Cooked for 2m 34s · done 11:30 PM

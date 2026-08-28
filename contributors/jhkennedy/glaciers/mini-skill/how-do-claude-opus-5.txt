@@ -1,0 +1,152 @@
+ ▐▛███▛█   Claude Code v2.1.248
+▝▜██████▀  Opus 5 · API Usage Billing
+  ▝▝ ▝▝    ~/tmp
+
+
+❯ /model                                                                        
+  ⎿  Set model to Opus 5 and saved as your default for new sessions
+
+❯ How do I get glacier velocity estimates from NISAR?                           
+
+● I'll check the NISAR documentation for this.
+
+● Skill(nisar-docs)
+  ⎿  Successfully loaded skill
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/)
+  ⎿  Received 100.3KB (200 OK)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/products-overview)
+  ⎿  Received 194.4KB (200 OK)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/applications-overview)
+  ⎿  Received 102.3KB (200 OK)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/goff)
+  ⎿  Received 109KB (200 OK)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/roff)
+  ⎿  Received 109.4KB (200 OK)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/availability-overview)
+  ⎿  Received 149.1KB (200 OK)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/access-overview)
+  ⎿  Received 161.9KB (200 OK)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/using-overview)
+  ⎿  Received 138.2KB (200 OK)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/tutorials-overview)
+  ⎿  Received 101KB (200 OK)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/observation-plan)
+  ⎿  Received 165.2KB (200 OK)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/python-tutorials)
+  ⎿  Received 112.4KB (200 OK)
+
+● Fetch(https://github.com/orgs/NISAR-Science-Algorithms/repositories)
+  ⎿  Received 229.9KB (200 OK)
+● Fetch(https://nisar-docs.asf.alaska.edu/goff)
+  ⎿  Received 109KB (200 OK)
+
+● NISAR doesn't ship a glacier velocity product — there's no Level-3 ice
+  velocity granule. You derive velocity yourself from the pixel offset products,
+  which are the offset-tracking layers the mission generates specifically for
+  surface motion.
+
+  The products you want
+
+  ┌─────────────────┬───────┬───────────────────┬─────────┬─────────────────┐
+  │     Product     │ Level │     Geometry      │ Posting │    Use when     │
+  ├─────────────────┼───────┼───────────────────┼─────────┼─────────────────┤
+  │ GOFF — Geocoded │       │ Map grid (UTM or  │         │ Default choice  │
+  │  Pixel Offsets  │ L2    │ polar             │ 80 m    │ — already       │
+  │                 │       │ stereographic)    │         │ geocoded        │
+  ├─────────────────┼───────┼───────────────────┼─────────┼─────────────────┤
+  │ ROFF —          │       │                   │         │ You want native │
+  │ Range-Doppler   │ L1    │ Radar (slant      │ ~90 m   │  geometry or    │
+  │ Pixel Offsets   │       │ range / azimuth)  │         │ full control    │
+  │                 │       │                   │         │ over geocoding  │
+  └─────────────────┴───────┴───────────────────┴─────────┴─────────────────┘
+
+  Both come from incoherent cross-correlation (speckle tracking) on a pair of
+  coarsely coregistered RSLC granules. GOFF is literally ROFF geocoded onto a
+  map grid by bilinear interpolation, so use GOFF unless you have a reason not
+  to.
+
+  - ROFF: https://nisar-docs.asf.alaska.edu/roff
+  - GOFF: https://nisar-docs.asf.alaska.edu/goff
+
+  Each product carries multiple offset layer groups — different correlation
+  window sizes and search radii, organized by range bandwidth and area of
+  observation. Larger windows are less noisy but smear spatial detail; on a
+  glacier you'll typically compare layers rather than assume one is right.
+
+  Getting from offsets to velocity
+
+  Roughly: take the along-track and slant-range offset layers, convert to
+  displacement, divide by the temporal baseline of the pair (read it from the
+  product metadata — NISAR's nominal repeat is 12 days, but don't hardcode
+  that), then project the two components into horizontal flow, usually under a
+  surface-parallel flow assumption with a DEM.
+
+  The caveat that matters most, stated explicitly in the docs for both products:
+  offset layers are distributed without any conventional post-processing — they
+  are not filtered and they do contain outliers. Budget real effort for masking
+  and filtering. Use the SNR layer and correlation-surface-peak metrics to
+  threshold, then despeckle/median-filter before differentiating into velocity.
+  Skipping this is the usual reason a first NISAR velocity map looks like noise.
+
+  Complementary path: InSAR
+
+  For slow-flowing ice where 12-day coherence survives, the interferometric
+  products (GUNW geocoded / RUNW range-Doppler unwrapped interferograms) give
+  far more precise line-of-sight displacement than offset tracking. The standard
+  approach in glaciology is to use InSAR in the slow interior and offsets in
+  the fast, heavily crevassed trunk and terminus where interferometric coherence
+  collapses. GCOV backscatter is also useful for manual feature tracking sanity
+  checks.
+
+  Access
+
+  Everything needs a free Earthdata Login (https://urs.earthdata.nasa.gov/).
+
+  - ASF Vertex — https://search.asf.alaska.edu — SAR-optimized search, best
+    starting point
+  - Earthdata Search — https://search.earthdata.nasa.gov/
+  - Programmatic — asf_search (docs
+    (https://docs.asf.alaska.edu/asf_search/basics/)) or earthaccess; direct S3
+    access from within AWS us-west-2
+  - Notebooks — ASF NISAR Cookbook
+    (https://asfopensarlab.github.io/NISAR_Cookbook/)
+
+  Two things to check before you plan work
+
+  1. Coverage over your target. The user guide doesn't publish a
+     region-by-product table, so confirm your glacier is actually acquired with
+     the pairs you need via the Reference Observation Plan map
+     (https://experience.arcgis.com/experience/6052a864cd01459393884a7f751558e3)
+     (there's a separate Antarctic one (https://experience.arcgis.com/experienc
+     e/83942599aec64c1c8ea8a8b913d22539)) and by searching Vertex directly for
+     ROFF/GOFF over your area.
+  2. Product maturity. Provisional products with forward processing began July
+     2026; earlier holdings are pre-calibration. Check the calibration status
+     before publishing velocities.
+
+  For the exact HDF5 layer names and variables, the web guide only summarizes —
+  pull the ROFF product spec PDF
+  (https://nisar.asf.earthdatacloud.nasa.gov/NISAR-SAMPLE-DATA/DOCS/NISAR_D-1050
+  09_RevC_NASA_SDS_Product_Specification_L1_ROFF_Nov8_2024_w-sigs.pdf) (GOFF's
+  is D-105010 RevC) and read the structure from a sample granule.
+
+  One gap worth knowing: the NISAR Science Team maintains a sea ice motion
+  workflow (https://github.com/NISAR-Science-Algorithms/NISAR_SeaIce), but
+  there's no equivalent published land-ice velocity workflow — so expect to
+  build the offsets-to-velocity chain yourself or adapt an existing one
+  (autoRIFT/ITS_LIVE-style tooling ports reasonably well to NISAR offsets).
+
+✻ Worked for 1m 52s · done 11:01 PM

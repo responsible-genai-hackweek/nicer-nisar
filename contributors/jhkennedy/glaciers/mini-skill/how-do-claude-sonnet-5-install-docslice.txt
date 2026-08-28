@@ -1,0 +1,102 @@
+ ▐▛███▛█   Claude Code v2.1.248
+▝▜██████▀  Sonnet 5 · API Usage Billing
+  ▝▝ ▝▝    ~/tmp
+
+
+❯ /model                                                                        
+  ⎿  Set model to Sonnet 5 and saved as your default for new sessions
+
+❯ How do I get glacier velocity estimates from NISAR?                           
+
+● Skill(nisar-docs)
+  ⎿  Successfully loaded skill
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● docslice (the tool this skill uses to query the NISAR Data User Guide) isn't
+  installed here, and per the skill's instructions I should stop and check with
+  you rather than silently falling back.
+
+● User answered Claude's questions:
+  ⎿  · docslice isn't installed. How would you like to proceed? → Install 
+     docslice
+
+  Read 1 file, ran 4 shell commands (ctrl+o to expand)
+
+● That global install was blocked since it pulls from the public npm registry
+  rather than the specific repo you approved. Let me instead build/install
+  docslice locally from within the cloned repo itself.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Build succeeded. Let's verify the CLI works from the local build.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● docslice is built and working locally. Now let's use it to query the NISAR
+  Data User Guide for glacier/ice velocity products.
+
+  Ran 12 shell commands (ctrl+o to expand)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/atbd)
+  ⎿  Received 119.1KB (200 OK)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I have enough from the NISAR Data User Guide to answer. Let me quickly check
+  ASF's data access side too, then clean up the local clone.
+
+  Ran 1 shell command (ctrl+o to expand)
+● Good, that confirms ASF DAAC is the data source. I have what I need to answer.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Getting glacier velocity from NISAR
+
+  NISAR doesn't currently distribute a ready-made "ice velocity" data product
+  off the shelf — per the Data Products Overview
+  (https://nisar-docs.asf.alaska.edu/products-overview), the only Level‑3
+  geophysical product listed today is Soil Moisture (SME2). Glacier/ice-sheet
+  velocity is instead derived from the pixel-offset (speckle-tracking) products,
+  which are explicitly built for cryosphere applications:
+
+  1. Get the offset-tracking products from ASF DAAC
+  - ROFF (https://nisar-docs.asf.alaska.edu/roff) — Level‑1, range-Doppler
+    (radar) coordinates, 90 m ground posting. Dense pixel offsets from
+    incoherent cross-correlation ("speckle tracking") between a coarsely
+    coregistered pair of RSLCs.
+  - GOFF (https://nisar-docs.asf.alaska.edu/goff) — Level‑2, the geocoded
+    version of ROFF at 80 m posting, projected to UTM/polar stereographic —
+    usually the more convenient one to start with since it's already
+    map-projected.
+
+  2. Derive velocity
+  Each offset layer gives you range and azimuth pixel displacement between the
+  reference/secondary RSLC pair. Convert those to ground displacement and divide
+  by the temporal baseline (time separation) between the two acquisitions to
+  get a velocity field. Layers are distributed raw — no low-pass filtering or
+  outlier removal — so you'll need to do your own filtering/outlier rejection.
+
+  3. Know the caveats (from Product Known Issues
+  (https://nisar-docs.asf.alaska.edu/product-known-issues#roff-products)):
+  - ROFF products over ice sheets currently have uncorrected ionospheric 
+    distortion in the azimuth offsets (up to a few pixels).
+  - The offset-tracking search radius is too small to capture fast ice motion
+    (>~a few thousand m/yr) in some acquisitions — a known limitation planned to
+    be expanded in future processing.
+
+  4. Algorithm reference
+  The authoritative algorithm document is the ATBD: "NISAR L3 Ice Sheets and 
+  Glacier Products" (Joughin, Rignot, Forster, Gardner & Scheuchl, 2022, Rev
+  2.1) — https://gitlab.com/nisar-science-algorithms/cryosphere/land-ice/atbd/do
+  cumentation/-/blob/main/ATBD_IceSheetVelocity-Version2.1.pdf. This is where
+  the actual velocity-derivation algorithm (built on top of ROFF/GOFF offsets)
+  is specified, ahead of it becoming a distributed L3 product.
+
+  Note: I had to install docslice from the specified GitHub repo (built it
+  locally under /tmp, no global install) to query the User Guide for this — it's
+  cleaned up now.
+
+✻ Brewed for 2m 55s · done 11:19 PM
+
+※ recap: You're figuring out how to get glacier velocity estimates from NISAR; I found that it's derived from ROFF/GOFF pixel-offset products rather than a ready-made product. Next: decide if you want to actually pull ROFF/GOFF data from ASF DAAC for a specific glacier. (disable recaps in /config)

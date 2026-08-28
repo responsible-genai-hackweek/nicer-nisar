@@ -1,0 +1,66 @@
+ ▐▛███▛█   Claude Code v2.1.248
+▝▜██████▀  Haiku 4.5 · API Usage Billing
+  ▝▝ ▝▝    ~/tmp
+
+
+❯ /skills 
+  ⎿  No changes
+
+❯ How do I get glacier velocity estimates from NISAR?                           
+
+  Thought for 2s (ctrl+o to expand)
+
+● Skill(nisar-docs)
+  ⎿  Successfully loaded skill
+
+  Thought for 2s (ctrl+o to expand)
+
+● Fetch(https://nisar-docs.asf.alaska.edu/)
+  ⎿  Received 100.3KB (200 OK)
+
+● Let me search the NISAR documentation for more specific information about
+  glacier velocity products:
+
+● Fetch(https://nisar-docs.asf.alaska.edu/products-overview/)
+  ⎿  Received 194.4KB (200 OK)
+
+● Let me look for ice sheet or glacier-specific resources:
+
+● Fetch(https://nisar-docs.asf.alaska.edu/using-overview/)
+  ⎿  Received 138.2KB (200 OK)
+
+● Based on the NISAR Data User Guide, here's how to approach getting glacier
+  velocity estimates from NISAR:
+
+  Key Data Products for Glacier Velocity
+
+  InSAR-based Interferogram Products (GUNW/RIFG): NISAR generates unwrapped
+  interferograms and geocoded unwrapped products that are the foundation for
+  velocity estimation. These capture phase differences between radar
+  observations separated in time, which can be converted to displacement
+  measurements.
+
+  Processing Workflow:
+  1. Use Level 2 products (geocoded) like GUNW (Geocoded Unwrapped
+     Interferogram) or GOFF (Geocoded Offset) products — these are
+     analysis-ready and georeferenced, making them suitable for glacier velocity
+     work
+  2. Leverage ISCE3 — NISAR's open-source InSAR Scientific Computing Environment
+     is designed for SAR/InSAR processing and can be used for custom velocity
+     derivation workflows
+  3. Offset tracking — GOFF products measure ground displacement between
+     acquisitions, directly providing velocity information
+
+  Recommended Approach
+
+  - Start with GUNW or GOFF Level 2 products rather than complex raw data
+  - Use ISCE3 or compatible tools (GDAL, rasterio, Python/NumPy workflows) to
+    process the data
+  - Consult the NISAR tutorials section of the guide for specific code examples
+  - Contact ASF User Services (uso@asf.alaska.edu) or the Earthdata Forum for
+    mission-specific guidance on ice sheet/glacier applications
+
+  The dual-frequency capability (S- and L-band) also provides advantages for
+  penetrating through snow/ice and improving coherence for velocity estimation.
+
+✻ Cogitated for 28s · done 10:51 PM

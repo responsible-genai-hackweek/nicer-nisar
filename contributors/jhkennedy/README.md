@@ -3,7 +3,7 @@ I've started asking a set of basic questions to different AIs to get a feel for 
 ## Questions
 
 > [!TIP]
-> For Claude, you can export chat session history using the `/export` command. Interstingly, sometimes if you export a `.txt` file, you'll get all the terminal output for the duration of the session, but if you export a `.md` file, you'll get just the questions and responses. 
+> For Claude, you can export chat session history using the `/export` command. Interestingly, sometimes if you export a `.txt` file, you'll get all the terminal output for the duration of the session, but if you export a `.md` file, you'll get just the questions and responses. 
 
 ### Glaicers
  

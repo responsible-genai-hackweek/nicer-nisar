@@ -133,6 +133,9 @@ Track D / relative orbit 065 / frame 4005 / DHDH, 28 granules, 2025-11-10 → 20
 | Re-open the persisted cube | 0.06–0.12 s |
 | Append one new acquisition | 0.8–2.5 s |
 | Pixels vs. a direct `h5py` read | byte-identical |
+| Index the full track over HTTPS, 8 threads | 84 s (threads *do* help here) |
+| Granule discovery, `earthaccess` (CMR) | 0.85 s → 23 acquisitions |
+| Granule discovery, `asf_search` (ASF) | 0.37 s → 24 acquisitions |
 
 **VirtualiZarr eliminates the metadata cost of opening NISAR archives, not the pixel cost.** Every
 pixel still comes over the wire at the original speed. What disappears is the repeated cost of
@@ -169,10 +172,12 @@ A/B/C are measured in `us-west-2`; D is computed from file sizes.
 
 | Path | Wall time | Bytes moved | Requests |
 |---|---|---|---|
-| **A** Icechunk virtual cube, direct S3 | **2.1 s** | **61 MB** | 92 |
-| **B** open every HDF5, direct S3 | 18.6 s | 1,092 MB | 253 |
-| **C** open every HDF5, over HTTPS | 68.1 s | 1,092 MB | 253 |
-| **D** download all granules first | 3.5 h *(modelled, 100 Mbit/s)* | 158 GB | 23 |
+| **A** Icechunk virtual cube, direct S3 | **2.6 s** | **61 MB** | 92 |
+| **A′** the same cube, referenced over HTTPS | 16.6 s | 61 MB | 92 |
+| **B** open every HDF5, direct S3 (`s3fs`) | 19.7 s | 1,092 MB | 253 |
+| **C** open every HDF5, over HTTPS (`fsspec`) | 72.8 s | 1,092 MB | 253 |
+| **D** `earthaccess.open()` — the idiomatic call | 25.9 s | 1,976 MB | 122 |
+| **E** download all granules first | 3.5 h *(modelled, 100 Mbit/s)* | 158 GB | 23 |
 
 (One run; the measured columns move by a few seconds with the network. The ratios do not.)
 
@@ -186,10 +191,38 @@ What disappears is not pixel reads — both paths read the same chunks — but t
 traversal, re-paid per granule per session. The AOI's chunks are 2.64 MB per granule; the direct
 path moves 11.8 MB (1 MB blocks), 43.3 MB (4 MB) or 167.6 MB (16 MB) before it can find them.
 
+**A virtual cube is not an in-region-only technique.** Path A′ builds the manifest from `https://`
+URLs and resolves it through `icechunk.http_store` with an Earthdata bearer token — no S3 anywhere
+— and returns pixels identical to path A. Off-AWS the honest pairing is A′ against C, both on the
+HTTPS endpoint: **16.6 s against 72.8 s, a 4.4× win, moving 18× less data.** So the advantage
+survives leaving the region; it just shrinks, because HTTPS costs the virtual path more per request
+than S3 does.
+
+Two details fell out of building it, both of which invert advice given elsewhere in this README:
+
+- **Threads help over HTTPS.** Over S3 the build is ~50% pure-Python URI validation holding the
+  GIL, so threads buy nothing. Over HTTPS the network wait dominates, the GIL stops mattering, and
+  8 threads bring the 23-granule build to 84 s. Same code, opposite advice.
+- **Authentication is *easier* over HTTPS.** The EDL bearer token is good for weeks (29 days on
+  the run above), where the S3 credentials expire hourly and need the refreshable-callable dance of
+  failure #5. `icechunk.http_store` takes static headers and that is genuinely sufficient — though
+  it has no refresh hook, so a job outliving its token still needs it re-issued.
+
 **The protocol switch alone costs ~3.7×.** Off-AWS users cannot use direct S3 — credentials are
 region-scoped — so path C is what they are forced onto. Measuring it *in-region* isolates the
 endpoint cost from the slower link; a slower link is then modelled on top from the measured byte
 and request counts, with the assumptions written down.
+
+**The idiomatic call is not the fastest one.** `earthaccess.open()` is what most people would
+actually write, and it resolves to direct S3 in-region — but it runs ~1.5× slower than hand-rolled
+`s3fs` and moves nearly twice the bytes in half the requests, trading data volume for round trips
+via a larger read-ahead block. That matters for the benchmark's honesty: path B is not a strawman,
+it is *leaner* than what a NISAR user would type, so the virtual cube's advantage over real-world
+practice is larger than the headline, not smaller.
+
+**Discovery is free, and the two search APIs disagree.** `earthaccess` (CMR) and `asf_search`
+(ASF) both answer in well under a second, so finding granules is nowhere near the cost of opening
+them. But they do not return the same record — see failure #9.
 
 **The index pays for itself in about one run**, because building it is itself a metadata-only
 operation (0.78 s/granule, 18 s for the whole track). Off-AWS it pays back in a fifth of a run. Anyone who runs an analysis twice, or shares the cube once, is past
@@ -339,6 +372,21 @@ time**, not the direction flag, and label every series with its relative orbit.
 covers Paradise, but the pixels are fill — the grid is a rectangle, the imaged swath inside it is
 not. Checking bounds is not checking coverage.
 
+**9. `earthaccess` and `asf_search` do not index the same archive.** Over the same bounding box
+and track, CMR returns **23** distinct acquisitions and ASF returns **24** — ASF surfaces
+`20251029T031847`, which CMR does not. ASF also exposes multiple *reprocessing campaigns* of the
+same take (CRIDs `P05023` and `X05009`) where CMR shows one. Neither is wrong; they are different
+indexes. But a pipeline that assumes they agree quietly indexes a different record depending on
+which library it imported, and the cube in these notebooks is built from the CMR list, so it is
+one acquisition short of what ASF knows about.
+
+This also sharpens failure #3: there are **two** duplication axes, not one. The CRID (reprocessing
+campaign) *and* the trailing `_NNN` within a campaign — three of the nine duplicated acquisitions
+have two files under the same CRID. `asf_search` hands you `crid` as metadata; with `earthaccess`
+you parse the filename yourself. And `max(crid)` — picking `X05009` over `P05023` — is the
+convention the reference notebook uses, not a documented ordering. Worth confirming with ASF
+before trusting it.
+
 Two smaller traps worth recording. Transient S3 failures (`InternalError`, dropped connections)
 are normal at this request volume and will kill an unattended run without retries — notebook 3
 wraps its reads. And when instrumenting fsspec, patch `file.cache.fetcher`, not
@@ -378,6 +426,7 @@ Three things to know:
 - `jupyterlab` and `nbconvert` are declared in `pixi.toml`, so `pixi run jupyter lab` works and
   the environment is self-contained. They were added after an environment rebuild removed the
   hub-provided Jupyter and left the committed notebooks un-runnable.
+- Notebook 4 uses `asf_search` alongside `earthaccess` to compare the two discovery APIs.
 - Notebook 3 additionally reads geometries from the sibling `nisar` repo
   (`/home/jovyan/repos/nisar/geometries/*.geojson`) and pulls Sentinel-1 and SNOTEL through
   `easysnowdata`, Sentinel-2 through the Element84 STAC API. Those are network calls to non-NASA
@@ -451,10 +500,13 @@ forest control site earned its place the same way — keep one in every analysis
 against a busy bucket; we saw `InternalError` and dropped connections in normal use. Notebook 3
 wraps its reads and that should be the default in anything scheduled.
 
-**11. Decide what off-AWS users get.** Path C measured a 3.8× penalty for the HTTPS endpoint before
-any network difference, and the laptop model suggests minutes rather than seconds. A shared index
-helps them most — they skip the build entirely — but they still stream pixels over HTTPS. Worth
-knowing whether the audience is in-region before optimizing further.
+**11. Off-AWS users are served, and the index helps them most.** Path A′ settles the open question:
+an HTTPS-referenced cube works, and beats granule-at-a-time on the same endpoint by 4.4×. Since
+they skip the build entirely when the index is shared, off-AWS users get the *largest* relative
+benefit — their break-even is 1.5 runs against C, and zero if someone else built it. Two caveats
+for a deployment: the manifest must be built from `https://` URLs (an S3-referenced cube is
+useless to them, so a shared store may need both, or a container mapping), and the bearer token
+needs re-issuing when it expires.
 
 ### What would tell us this is the wrong approach
 

@@ -19,9 +19,17 @@ GCOV_GRIDS = "/science/LSAR/GCOV/grids/frequencyA"
 
 #: NISAR L2 GCOV filename fields we care about, e.g.
 #: NISAR_L2_PR_GCOV_004_172_D_065_4005_DHDH_A_20251110T031848_...
+#:
+#: Per the NISAR naming convention (nisar-docs, "Naming Conventions") the
+#: fields are CYCLE_REL_P_FRM_MODE_POLE: ``172`` is the *relative orbit*,
+#: ``065`` the *frame*, ``4005`` the *bandwidth mode* (40 MHz + 5 MHz).
+#: Earlier versions of this module mislabelled them (``relorb`` for the frame,
+#: ``frame`` for the mode), which grouped granules by frame across *all*
+#: relative orbits — the real cause of README failure #2.  The group names below
+#: are correct; ``relorb``/``frame`` are kept as aliases for the notebooks.
 GRANULE_RX = re.compile(
-    r"NISAR_L2_\w\w_GCOV_(?P<cycle>\d+)_(?P<absorb>\d+)_(?P<direction>[AD])_"
-    r"(?P<relorb>\d+)_(?P<frame>\d+)_(?P<pols>\w+)_\w_"
+    r"NISAR_L2_\w\w_GCOV_(?P<cycle>\d+)_(?P<relative_orbit>\d+)_(?P<direction>[AD])_"
+    r"(?P<frame>\d+)_(?P<mode>\d+)_(?P<pols>\w+)_\w_"
     r"(?P<start>\d{8}T\d{6})_(?P<end>\d{8}T\d{6})_"
 )
 
@@ -86,9 +94,11 @@ def find_track(bbox, short_name="NISAR_L2_GCOV_PROVISIONAL_V1", count=200):
     versions of the same take (``..._001.h5`` and ``..._002.h5``), the highest is
     kept. Leaving both in produces a duplicated time step in the cube.
 
-    Grouping by track and frame is a first cut, not the answer — granules on the
-    same track and frame can still be posted to different output grids. Confirm
-    with ``group_by_grid`` before concatenating.
+    The key is a true *track-frame* (relative orbit **and** frame). One
+    track-frame is one output grid in every case audited so far; ``group_by_grid``
+    remains the check that makes it so rather than an assumption.  (Before
+    2026-08-28 this keyed on frame and bandwidth mode, mislabelled as relative
+    orbit and frame, which merged different tracks — see the README erratum.)
     """
     from collections import defaultdict
 
@@ -104,7 +114,7 @@ def find_track(bbox, short_name="NISAR_L2_GCOV_PROVISIONAL_V1", count=200):
             name = url.rsplit("/", 1)[-1]
             if not (m := GRANULE_RX.search(name)):
                 continue
-            key = (m["direction"], m["relorb"], m["frame"], m["pols"])
+            key = (m["direction"], m["relative_orbit"], m["frame"], m["pols"])
             v = VERSION_RX.search(name)
             version = int(v["version"]) if v else 0
             start = m["start"]

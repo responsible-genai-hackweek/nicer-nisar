@@ -10,7 +10,8 @@ Show data size and run a test that downloads only one datafile prior to any larg
 
 ## when writing new code
 Prioritize simple, understandable code over efficiency.
-Provide lots of comments when creating code
+Provide lots of comments when creating code.
+Make code concise and readable.
 
 ## resources
 Primary source of info for NISAR data here:

@@ -4,8 +4,8 @@ Calculate local incidence angle for NISAR GCOV products using terrain from a DEM
 
 This module computes the true local incidence angle (angle between radar line-of-sight
 and terrain surface normal) by combining the radar geometry stored in NISAR GCOV files
-with elevation data from a digital elevation model. By default uses the public Copernicus
-30 m DEM (via AWS COG), but can accept a user-provided higher-resolution DEM.
+with elevation data from a digital elevation model. By default uses the NISAR DEM
+(WGS84 ellipsoid datum), but can accept a user-provided higher-resolution DEM.
 
 The stored NISAR incidenceAngle layer is NOT local — it's the angle to the ellipsoid
 normal and ignores terrain slope. This module corrects for actual topography.
@@ -22,81 +22,7 @@ import pyproj
 import matplotlib.pyplot as plt
 from matplotlib.colors import LightSource
 import os
-
-
-def fetch_copernicus_dem(bounds_lonlat, buffer_deg=0.02):
-    """
-    Fetch Copernicus 30 m DEM over an AOI from the public AWS bucket.
-
-    Directly reads Cloud Optimized GeoTIFFs from the copernicus-dem-30m AWS bucket
-    via /vsicurl/ (HTTP windowed read — no full download). Handles multi-tile mosaics
-    if the AOI spans more than one 1°×1° tile.
-
-    Parameters:
-    -----------
-    bounds_lonlat : tuple
-        (min_lon, min_lat, max_lon, max_lat) of the area of interest
-    buffer_deg : float
-        Expand bounds by this many degrees on all sides (default 0.02 ≈ 2 km)
-
-    Returns:
-    --------
-    dem_array : ndarray (float32)
-        Elevation data in WGS84 (EPSG:4326), shape (height, width)
-    transform : rasterio.Transform
-        Geospatial transform (maps pixel coords → WGS84)
-    crs : rasterio.crs.CRS
-        Coordinate reference system (EPSG:4326)
-    """
-
-    min_lon, min_lat, max_lon, max_lat = bounds_lonlat
-    min_lon -= buffer_deg
-    min_lat -= buffer_deg
-    max_lon += buffer_deg
-    max_lat += buffer_deg
-
-    # Determine which 1° DEM tiles are needed (tiles are named by SW corner: N{lat}0_W{lon}00)
-    tile_min_lat = int(np.floor(min_lat))
-    tile_max_lat = int(np.floor(max_lat))
-    tile_min_lon = int(np.floor(-max_lon))  # Note the flip: eastern hemisphere uses negative W
-    tile_max_lon = int(np.floor(-min_lon))
-
-    tiles_needed = []
-    for lat in range(tile_min_lat, tile_max_lat + 1):
-        for lon in range(tile_min_lon, tile_max_lon + 1):
-            tiles_needed.append((lat, lon))
-
-    # Fetch and mosaic tiles (often just one tile is needed)
-    dem_mosaic = None
-    bounds_collected = None
-
-    for lat, lon in tiles_needed:
-        # Copernicus DEM AWS bucket tile naming: Copernicus_DSM_COG_10_N{lat}_00_W{lon}_00_DEM.tif
-        # Tiles are 1°×1° (3600×3600 pixels at ~30 m nominal spacing)
-        url = f"/vsicurl/https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N{lat:02d}_00_W{lon:03d}_00_DEM/Copernicus_DSM_COG_10_N{lat:02d}_00_W{lon:03d}_00_DEM.tif"
-
-        print(f"Fetching DEM tile N{lat:02d}_W{lon:03d}...")
-
-        with rasterio.open(url) as src:
-            # Read the portion of this tile that overlaps our AOI
-            # (rasterio.open with /vsicurl/ supports windowed reads, so only the needed part downloads)
-            dem_tile = src.read(1)
-            tile_transform = src.transform
-            tile_crs = src.crs
-
-            if dem_mosaic is None:
-                dem_mosaic = dem_tile
-                transform = tile_transform
-                crs = tile_crs
-            else:
-                # Simple left-right concatenation (assumes tiles are ordered W→E, N→S)
-                # For multi-tile: a proper mosaic would require more complex stitching
-                # For now assume single tile; warn if multi-tile detected
-                if len(tiles_needed) > 1:
-                    print("WARNING: AOI spans multiple tiles; using first tile only (proper mosaic not yet implemented)")
-                    break
-
-    return dem_mosaic, transform, crs
+import earthaccess
 
 
 def calculate_local_incidence_angle(gcov_file, kml_file, dem_file=None, buffer_m=200,
@@ -112,7 +38,7 @@ def calculate_local_incidence_angle(gcov_file, kml_file, dem_file=None, buffer_m
     kml_file : str
         Path to KML file containing the AOI polygon
     dem_file : str, optional
-        Path to a raster DEM file (GeoTIFF, etc.). If None, fetch Copernicus 30 m DEM from AWS.
+        Path to a raster DEM file (GeoTIFF, etc.). If None, fetch NISAR DEM from ASF.
     buffer_m : float
         Buffer around the KML AOI in meters (default 200)
     frequency : str
@@ -287,24 +213,56 @@ def calculate_local_incidence_angle(gcov_file, kml_file, dem_file=None, buffer_m
     print("Loading DEM...")
 
     if dem_file is None:
-        # Fetch from Copernicus AWS directly with rasterio
-        # Determine which tile is needed based on bounds_lonlat
-        # Tiles are 1°×1° in WGS84, named by SW corner: N{lat}_W{abs(lon)}
-        # For western hemisphere: W value = ceiling of abs(most_negative_longitude)
-        # E.g., -115.73 → W116 (because floor(-115.73) = -116, abs = 116)
-        min_lon = bounds_lonlat[0]  # Most negative (western) longitude
-        min_lat = bounds_lonlat[1]  # Southern latitude
+        # Fetch NISAR DEM from ASF (https://search.earthdata.nasa.gov/search?q=NISAR_DEM)
+        # NISAR DEM covers global 30m elevation with WGS84 ellipsoid datum
+        min_lon = bounds_lonlat[0]
+        min_lat = bounds_lonlat[1]
+        max_lon = bounds_lonlat[2]
+        max_lat = bounds_lonlat[3]
 
-        tile_w = int(np.ceil(abs(min_lon)))  # Convert to tile W value
-        tile_n = int(np.floor(min_lat))     # Convert to tile N value
+        # Authenticate with earthaccess (needed for ASF Earthdata access)
+        print("  Authenticating with Earthdata...")
+        auth = earthaccess.login(strategy="netrc", persist=False)
+        if not auth.authenticated:
+            raise RuntimeError("Failed to authenticate with Earthdata. Ensure ~/.netrc has valid credentials for urs.earthdata.nasa.gov")
 
-        dem_url = f"/vsicurl/https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N{tile_n:02d}_00_W{tile_w:03d}_00_DEM/Copernicus_DSM_COG_10_N{tile_n:02d}_00_W{tile_w:03d}_00_DEM.tif"
-        print(f"  Fetching from tile N{tile_n:02d}_W{tile_w:03d}")
-        dem_src_obj = rasterio.open(dem_url)
-        dem_data = dem_src_obj.read(1)
-        dem_transform = dem_src_obj.transform
-        dem_crs = dem_src_obj.crs
-        dem_nodata = dem_src_obj.nodata
+        # NISAR DEM tiles are 1°×1° in WGS84 (EPSG:4326)
+        # Search for tiles that intersect the AOI bounding box
+        print(f"  Searching for NISAR DEM tiles...")
+        try:
+            results = earthaccess.search_data(
+                short_name="NISAR_DEM",
+                bounding_box=(min_lon, min_lat, max_lon, max_lat),
+            )
+            if not results:
+                raise RuntimeError(f"No NISAR DEM tiles found for AOI bounds: ({min_lon}, {min_lat}, {max_lon}, {max_lat})")
+
+            # Download the first matching tile
+            print(f"  Found {len(results)} NISAR DEM tile(s), downloading first match...")
+            dem_temp_dir = "./nisar_dem_temp"
+            downloaded_files = earthaccess.download(results[0], local_path=dem_temp_dir)
+
+            if not downloaded_files:
+                raise RuntimeError("earthaccess.download() returned no files")
+
+            dem_file_path = downloaded_files[0]
+            print(f"    Downloaded: {dem_file_path}")
+
+            # Open the downloaded file with rasterio
+            dem_src_obj = rasterio.open(dem_file_path)
+            dem_data = dem_src_obj.read(1)
+            dem_transform = dem_src_obj.transform
+            dem_crs = dem_src_obj.crs
+            dem_nodata = dem_src_obj.nodata
+            print(f"    SUCCESS: Opened NISAR DEM")
+        except Exception as e:
+            raise RuntimeError(
+                f"Could not fetch NISAR DEM for AOI.\n"
+                f"Error: {e}\n"
+                f"AOI bounds: ({min_lon}, {min_lat}, {max_lon}, {max_lat})\n"
+                f"See https://search.earthdata.nasa.gov/search?q=NISAR_DEM for available tiles.\n"
+                f"Alternatively, provide a local DEM file via dem_file parameter."
+            )
     else:
         # Load from user file
         print(f"  Reading DEM from {dem_file}")
